@@ -683,8 +683,7 @@ try { checks = JSON.parse(localStorage.getItem("cs-checks") || "{}"); } catch(e)
 
 function pickLang(){
   try { const s = localStorage.getItem("cs-lang"); if (s && T[s]) return s; } catch(e) {}
-  const n = (navigator.language || "pt").slice(0,2).toLowerCase();
-  return T[n] ? n : "en";
+  return "pt";
 }
 
 function card(title, tag, desc, q, extra, L){
