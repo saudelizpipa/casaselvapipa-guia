@@ -113,6 +113,17 @@ section p{margin:0;max-width:65ch}
 .hint{margin:8px 0 0;font-size:13px;color:var(--muted)}
 h3.sub{font-size:22px;margin-top:6px}
 h3.sub.small{font-family:var(--body);font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--ocean);margin-top:4px}
+/* LANGUAGE CHOICE */
+.splash{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background-color:var(--jungle);background-size:cover;background-position:center}
+.splash[hidden]{display:none}
+.splash-card{background:var(--cream);border-radius:24px;padding:26px 22px 22px;width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.splash-card .logo{width:140px;height:auto}
+.splash-q{margin:0;font-size:14px;line-height:1.5;color:var(--muted)}
+.splash-langs{display:grid;gap:10px;width:100%}
+.splash-langs button{border:1.5px solid var(--jungle);background:#fff;color:var(--jungle);border-radius:14px;padding:14px;font-size:18px;font-weight:600;cursor:pointer}
+.splash-langs button:hover,.splash-langs button:focus-visible{background:var(--jungle);color:#fff}
+nav.chapters button.langbtn{background:var(--sun);border-color:var(--sun);color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+nav.chapters button.langbtn svg{width:16px;height:16px}
 .todo{display:inline-block;background:var(--todo-bg);border:1.5px dashed var(--todo-line);color:#6b4d00;border-radius:6px;padding:0 6px;font-size:.9em;font-weight:600}
 
 footer{background:var(--jungle);color:#cfe0d5;text-align:center;padding:28px 20px 36px;display:flex;flex-direction:column;gap:6px;font-size:14px}
@@ -128,6 +139,18 @@ footer a{color:var(--sun)}
 </style>
 </head>
 <body>
+<div class="splash" id="splash" role="dialog" aria-modal="true" aria-labelledby="splashQ" hidden>
+  <div class="splash-card">
+    <img class="logo" id="splashLogo" alt="Casa Selva – Pipa, Brasil">
+    <p class="splash-q" id="splashQ">Escolha o idioma<br>Choose your language<br>Choisissez votre langue<br>Elija su idioma</p>
+    <div class="splash-langs">
+      <button type="button" data-lang="pt">Português</button>
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="fr">Français</button>
+      <button type="button" data-lang="es">Español</button>
+    </div>
+  </div>
+</div>
 
 <header class="hero">
   <div class="photo">
@@ -721,10 +744,12 @@ function render(){
     setTimeout(() => { b.textContent = L.ui.copy; }, 2000);
   };
 
-  document.getElementById("navTrack").innerHTML = L.nav.map((n,i) =>
-    `<button type="button" data-target="${IDS[i]}">${n}</button>`).join("");
-  document.querySelectorAll("#navTrack button").forEach(b => b.onclick = () =>
+  document.getElementById("navTrack").innerHTML =
+    `<button type="button" class="langbtn" id="langBtn" aria-label="Language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>${lang.toUpperCase()}</button>` +
+    L.nav.map((n,i) => `<button type="button" data-target="${IDS[i]}">${n}</button>`).join("");
+  document.querySelectorAll("#navTrack button[data-target]").forEach(b => b.onclick = () =>
     document.getElementById(b.dataset.target).scrollIntoView({block:"start"}));
+  document.getElementById("langBtn").onclick = openSplash;
 
   const beaches = BEACHES.map(b => card(b.name, L.beaches[b.id][0], L.beaches[b.id][1], b.q,
     `<span class="tide ${b.low ? "" : "ok"}">${b.low ? L.ui.lowOnly : L.ui.anyTide}</span>`, L)).join("");
@@ -772,7 +797,7 @@ function observeNav(){
   io = new IntersectionObserver(entries => {
     entries.forEach(en => {
       if (!en.isIntersecting) return;
-      document.querySelectorAll("#navTrack button").forEach(b => {
+      document.querySelectorAll("#navTrack button[data-target]").forEach(b => {
         const on = b.dataset.target === en.target.id;
         b.classList.toggle("on", on);
         if (on) b.scrollIntoView({inline:"center", block:"nearest"});
@@ -782,14 +807,40 @@ function observeNav(){
   IDS.forEach(id => { const el = document.getElementById(id); if (el) io.observe(el); });
 }
 
-document.querySelectorAll(".langs button").forEach(b => b.onclick = () => {
-  lang = b.dataset.lang;
+function setLang(l){
+  lang = l;
   try { localStorage.setItem("cs-lang", lang); } catch(e) {}
   render();
+}
+function openSplash(){
+  const sp = document.getElementById("splash");
+  sp.hidden = false;
+  document.body.style.overflow = "hidden";
+  const first = sp.querySelector(`button[data-lang="${lang}"]`) || sp.querySelector("button");
+  first.focus();
+}
+function closeSplash(){
+  document.getElementById("splash").hidden = true;
+  document.body.style.overflow = "";
+}
+document.querySelectorAll(".langs button").forEach(b => b.onclick = () => setLang(b.dataset.lang));
+document.querySelectorAll(".splash-langs button").forEach(b => b.onclick = () => {
+  setLang(b.dataset.lang);
+  closeSplash();
+  window.scrollTo(0, 0);
 });
+(function(){
+  const sp = document.getElementById("splash");
+  const photo = document.querySelector(".photo img");
+  sp.style.backgroundImage = `linear-gradient(rgba(30,38,18,.45),rgba(30,38,18,.7)), url("${photo.src}")`;
+  document.getElementById("splashLogo").src = document.querySelector(".brand-panel .logo").src;
+})();
 
+let chosen = null;
+try { chosen = localStorage.getItem("cs-lang"); } catch(e) {}
 lang = pickLang();
 render();
+if (!chosen || !T[chosen]) openSplash();
 </script>
 </body>
 </html>
